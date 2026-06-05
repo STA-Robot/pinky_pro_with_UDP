@@ -14,70 +14,91 @@ class CameraSenderNode(Node):
     def __init__(self):
         super().__init__('camera_sender_node')
 
+        # 파라미터 선언
+        self.declare_parameter("server_ip", "192.168.4.2")
+        self.declare_parameter("server_port", 9999)
+        self.declare_parameter("fps", 10)
+        self.declare_parameter("width", 640)
+        self.declare_parameter("height", 480)
+
+        #파라미터 읽기
+        self.server_ip = self.get_parameter("server_ip").value
+        self.server_port = self.get_parameter("server_port").value
+        self.fps = self.get_parameter("fps").value
+        self.width = self.get_parameter("width").value
+        self.height = self.get_parameter("height").value
+
         # 상태
         self.running = False
         self.thread = None
 
-        # 구독
-        self.sub = self.create_subscription(
-            String,
-            "follow_event",
-            self.callback,
-            10
-        )
-
+        # # 구독
+        # self.sub = self.create_subscription(
+        #     String,
+        #     "follow_command",
+        #     self.callback,
+        #     10
+        # )
+        self.start_stream()
         self.get_logger().info("CameraSenderNode Ready")
 
-    def callback(self, msg):
-        if msg.data == "start":
-            self.start_stream()
-        elif msg.data == "stop":
-            self.stop_stream()
+    # def callback(self, msg):
+    #     if msg.data == "start":
+    #         self.start_stream()
+    #     elif msg.data == "stop":
+    #         self.stop_stream()
 
     def start_stream(self):
         if self.running:
             return
 
         self.running = True
-        self.thread = threading.Thread(target=self.stream_loop)
+        self.thread = threading.Thread(target=self.stream_loop, daemon=True)
         self.thread.start()
 
         self.get_logger().info("카메라 송신 시작")
 
     def stop_stream(self):
+        if not self.running:
+            return
+
         self.running = False
+
+        if self.thread is not None:
+            self.thread.join()   
+            self.thread = None
+
         self.get_logger().info("카메라 송신 정지")
 
     def stream_loop(self):
-        # YAML 로드
-        with open("udpconfig.yaml", "r") as f:
-            config = yaml.safe_load(f)
-
-        udp_cfg = config["udp"]
-        camera_cfg = config["camera"]
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         picam2 = Picamera2()
         video_config = picam2.create_video_configuration(
-            main={"size": (camera_cfg["width"], camera_cfg["height"])},
-            controls={"FrameRate": camera_cfg["fps"]}
+            main={"size": (self.width, self.height)},
+            controls={"FrameRate": self.fps}
         )
         picam2.configure(video_config)
         picam2.start()
         time.sleep(1)
 
         while self.running:
-            frame = picam2.capture_array()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            try:
+                frame = picam2.capture_array()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = cv2.rotate(frame, cv2.ROTATE_180)
 
-            _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
-            data = jpeg.tobytes()
+                _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                data = jpeg.tobytes()
 
-            if len(data) < 65507:
-                sock.sendto(data, (udp_cfg["server_ip"], udp_cfg["server_port"]))
+                if len(data) < 65507:
+                    sock.sendto(data, (self.server_ip, self.server_port))
+                    self.get_logger().info(f"SEND! {self.server_ip}")
 
-            time.sleep(1 / camera_cfg["fps"])
+                time.sleep(1 / max(self.fps, 1))
+
+            except Exception as e:
+                self.get_logger().error(f"Stream error: {e}")
 
         picam2.stop()
         sock.close()
