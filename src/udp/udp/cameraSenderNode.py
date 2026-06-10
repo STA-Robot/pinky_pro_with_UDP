@@ -15,15 +15,17 @@ class CameraSenderNode(Node):
         super().__init__('camera_sender_node')
 
         # 파라미터 선언
-        self.declare_parameter("server_ip", "192.168.4.2")
-        self.declare_parameter("server_port", 9999)
+        self.declare_parameter("robot_name", "pinky1")
+        self.declare_parameter("robot_ip", "192.168.4.2")
+        self.declare_parameter("robot_port", 9999)
         self.declare_parameter("fps", 10)
         self.declare_parameter("width", 640)
         self.declare_parameter("height", 480)
 
         #파라미터 읽기
-        self.server_ip = self.get_parameter("server_ip").value
-        self.server_port = self.get_parameter("server_port").value
+        self.robot_name = self.get_parameter("robot_name").value
+        self.robot_ip = self.get_parameter("robot_ip").value
+        self.robot_port = self.get_parameter("robot_port").value
         self.fps = self.get_parameter("fps").value
         self.width = self.get_parameter("width").value
         self.height = self.get_parameter("height").value
@@ -32,21 +34,8 @@ class CameraSenderNode(Node):
         self.running = False
         self.thread = None
 
-        # # 구독
-        # self.sub = self.create_subscription(
-        #     String,
-        #     "follow_command",
-        #     self.callback,
-        #     10
-        # )
         self.start_stream()
         self.get_logger().info("CameraSenderNode Ready")
-
-    # def callback(self, msg):
-    #     if msg.data == "start":
-    #         self.start_stream()
-    #     elif msg.data == "stop":
-    #         self.stop_stream()
 
     def start_stream(self):
         if self.running:
@@ -90,10 +79,13 @@ class CameraSenderNode(Node):
 
                 _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
                 data = jpeg.tobytes()
+               
+                header = f"{self.robot_name}|".encode()
+                packet = header + data
 
-                if len(data) < 65507:
-                    sock.sendto(data, (self.server_ip, self.server_port))
-                    self.get_logger().info(f"SEND! {self.server_ip}")
+                if len(packet) < 65507:
+                    sock.sendto(packet, (self.robot_ip, self.robot_port))
+                    self.get_logger().info(f"SEND! {self.robot_ip}")
 
                 time.sleep(1 / max(self.fps, 1))
 
