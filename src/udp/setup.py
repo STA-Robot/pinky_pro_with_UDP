@@ -28,7 +28,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'cameraSenderNode = udp.cameraSenderNode:main',
+            'cameraSender = udp.cameraSender:main',
         ],
     },
 )
