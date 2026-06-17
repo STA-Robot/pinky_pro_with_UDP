@@ -35,7 +35,6 @@ class CameraSenderNode(Node):
         self.thread = None
 
         self.start_stream()
-        self.get_logger().info("CameraSenderNode Ready")
 
     def start_stream(self):
         if self.running:
@@ -85,7 +84,6 @@ class CameraSenderNode(Node):
 
                 if len(packet) < 65507:
                     sock.sendto(packet, (self.server_ip, self.server_port))
-                    self.get_logger().info(f"SEND! {self.server_ip}")
 
                 time.sleep(1 / max(self.fps, 1))
 
