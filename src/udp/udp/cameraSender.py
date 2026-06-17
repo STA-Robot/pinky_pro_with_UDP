@@ -6,10 +6,10 @@ import argparse
 from picamera2 import Picamera2
 
 class CameraSender:
-    def __init__(self, robot_name, robot_ip, robot_port, fps, width, height):
+    def __init__(self, robot_name, server_ip, server_port, fps, width, height):
         self.robot_name = robot_name
-        self.robot_ip = robot_ip
-        self.robot_port = robot_port
+        self.server_ip = server_ip
+        self.server_port = server_port
         self.fps = fps
         self.width = width
         self.height = height
@@ -23,7 +23,7 @@ class CameraSender:
         self.running = True
         self.thread = threading.Thread(target=self.stream_loop, daemon=True)
         self.thread.start()
-        print(f"카메라 송신 시작: {self.robot_ip}:{self.robot_port}")
+        print(f"카메라 송신 시작: {self.server_ip}:{self.server_port}")
 
     def stop_stream(self):
         self.running = False
@@ -56,7 +56,7 @@ class CameraSender:
                 packet = header + data
 
                 if len(packet) < 65507:
-                    sock.sendto(packet, (self.robot_ip, self.robot_port))
+                    sock.sendto(packet, (self.server_ip, self.server_port))
                 
                 time.sleep(1 / max(self.fps, 1))
             except Exception as e:
@@ -69,12 +69,12 @@ class CameraSender:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--robot_name", default="pinky2")
-    parser.add_argument("--robot_ip", default="192.168.4.2")
-    parser.add_argument("--robot_port", type=int, default=9998)
+    parser.add_argument("--server_ip", default="192.168.4.2")
+    parser.add_argument("--server_port", type=int, default=9999)
     parser.add_argument("--fps", type=int, default=10)
     args = parser.parse_args()
 
-    sender = CameraSender(args.robot_name, args.robot_ip, args.robot_port, args.fps, 640, 480)
+    sender = CameraSender(args.robot_name, args.server_ip, args.server_port, args.fps, 640, 480)
     
     try:
         sender.start_stream()
