@@ -1,8 +1,8 @@
 camera_sender_node:
   ros__parameters:
     robot_name: "pinky1"
-    robot_ip: "192.168.4.2"
-    robot_port: 9999
+    server_ip: "192.168.4.2"
+    server_port: 9999
     fps: 10
     width: 640
     height: 480
