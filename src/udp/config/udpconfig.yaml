@@ -6,3 +6,4 @@ camera_sender_node:
     fps: 10
     width: 640
     height: 480
+    capture_timeout: 1.0

@@ -64,7 +64,8 @@ class CameraSenderNode(Node):
         picam2 = Picamera2()
         video_config = picam2.create_video_configuration(
             main={"size": (self.width, self.height)},
-            controls={"FrameRate": self.fps}
+            controls={"FrameRate": self.fps},
+            buffer_count=2
         )
         picam2.configure(video_config)
         picam2.start()
